@@ -1,0 +1,29 @@
+[project]
+name = "rag-gcs-handler"
+version = "0.1.0"
+description = "Cloud Function GCS event handler that creates Cloud Tasks for document processing queue"
+requires-python = ">=3.10"
+dependencies = [
+    "cloudevents>=1.9.0",
+    "functions-framework>=3.4.0",
+    "google-cloud-tasks>=2.16.0",
+    "psycopg2-binary>=2.9.9",
+    "structlog>=23.2.0",
+    "grpcio>=1.60.0,<1.75.0",
+]
+
+# Cloud Functions optimization - prevent source builds
+[tool.uv]
+no-build-package = ["grpcio"]  # Don't build grpcio from source - use wheels only
+
+[dependency-groups]
+dev = [
+    "mypy>=1.6.0",
+    "types-psycopg2>=2.9.0",
+    "types-protobuf>=4.24.0",
+]
+lint = [
+    "ruff>=0.1.0",
+    "black>=23.0.0", 
+    "mypy>=1.6.0",
+]

@@ -1,0 +1,6 @@
+# Test output files - generated embeddings and results
+output/
+*.json
+
+# Keep output directory structure
+!output/.gitkeep

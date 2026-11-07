@@ -1,0 +1,86 @@
+name: Deploy RAG Processor (Dev)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/rag-processor/**'
+      - 'scripts/deploy_rag_processor_*.py'
+      - '.github/workflows/rag-processor-dev.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: gcr.io
+  SERVICE_NAME: rag-processor-dev
+  REGION: us-central1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_DEV }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: |
+          gcloud auth configure-docker ${{ env.REGISTRY }}
+
+      - name: Install dependencies
+        working-directory: ./apps/rag-processor
+        run: |
+          uv sync --all-groups
+
+      - name: Lint and format check
+        working-directory: ./apps/rag-processor
+        run: |
+          uv run ruff check . || true
+          uv run ruff format --check . || true
+
+      - name: Type checking
+        working-directory: ./apps/rag-processor
+        run: |
+          uv run mypy . || true
+
+      - name: Deploy to Cloud Run
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DEV }}
+          GOOGLE_CLOUD_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_DEV }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        working-directory: ./scripts
+        run: |
+          uv run python -m deploy_rag_processor_dev
+
+      - name: Verify deployment
+        env:
+          GOOGLE_CLOUD_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_DEV }}
+        run: |
+          gcloud run jobs describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format="value(name,state)"
+
+      - name: Output deployment status
+        if: success()
+        run: |
+          echo "✅ RAG Processor deployed successfully to ${{ env.SERVICE_NAME }}"
+          echo "Region: ${{ env.REGION }}"

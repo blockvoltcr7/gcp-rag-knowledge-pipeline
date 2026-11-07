@@ -1,0 +1,34 @@
+# Cloud Build: RAG Processor with model caching
+
+substitutions:
+  _AR_HOSTNAME: us-central1-docker.pkg.dev
+  _REPO: rag-services
+  _IMAGE: rag-processor-app # Will be overridden by deployment scripts with environment-specific names
+  _KANIKO_CACHE_TTL: 336h
+  _GCS_BUCKET: ${PROJECT_ID}-rag-documents-dev # Will be overridden by deployment scripts with environment-specific buckets
+
+options:
+  diskSizeGb: 200
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  - id: build
+    name: gcr.io/kaniko-project/executor:latest
+    args:
+      - --destination=${_AR_HOSTNAME}/${PROJECT_ID}/${_REPO}/${_IMAGE}:${BUILD_ID}
+      - --destination=${_AR_HOSTNAME}/${PROJECT_ID}/${_REPO}/${_IMAGE}:latest
+      - --cache=true
+      - --cache-repo=${_AR_HOSTNAME}/${PROJECT_ID}/${_REPO}/cache
+      - --cache-ttl=${_KANIKO_CACHE_TTL}
+      - --cache-run-layers=true
+      - --compressed-caching=false
+      - --snapshot-mode=redo
+      - --use-new-run
+      - --cleanup
+      - --verbosity=info
+      - --build-arg=GCS_BUCKET=${_GCS_BUCKET}
+      - --dockerfile=Dockerfile
+      - --context=dir:///workspace
+    env:
+      - DOCKER_CONFIG=/kaniko/.docker/
+    waitFor: ["-"]

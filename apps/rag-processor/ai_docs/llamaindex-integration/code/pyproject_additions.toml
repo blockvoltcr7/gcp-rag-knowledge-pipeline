@@ -1,0 +1,70 @@
+# =============================================================================
+# ADD THESE DEPENDENCIES TO pyproject.toml
+# =============================================================================
+
+# Add to [project.dependencies] section:
+
+[project]
+dependencies = [
+    # ... existing dependencies ...
+
+    # ==========================================================================
+    # NEW: LlamaIndex Document Processing
+    # ==========================================================================
+
+    # Core LlamaIndex
+    "llama-index-core>=0.14.0,<0.15.0",
+
+    # File readers for various document types
+    "llama-index-readers-file>=0.4.0,<0.5.0",
+
+    # Optional: Vertex AI embeddings integration (if migrating embeddings too)
+    # "llama-index-embeddings-vertex>=0.3.0,<0.4.0",
+]
+
+# =============================================================================
+# ADD NEW DEPENDENCY GROUP FOR LLAMAPARSE (OPTIONAL)
+# =============================================================================
+
+[dependency-groups]
+# ... existing groups ...
+
+# LlamaParse for high-quality PDF parsing (optional, requires API key)
+llamaparse = [
+    "llama-parse>=0.6.0,<0.7.0",
+]
+
+# Full LlamaIndex installation with all readers
+llamaindex-full = [
+    "llama-index-core>=0.14.0",
+    "llama-index-readers-file>=0.4.0",
+    "llama-parse>=0.6.0",
+    "llama-index-embeddings-vertex>=0.3.0",
+    "llama-index-embeddings-gemini>=0.3.0",
+]
+
+# =============================================================================
+# INSTALLATION COMMANDS
+# =============================================================================
+
+# Basic installation (without LlamaParse):
+# uv pip install llama-index-core llama-index-readers-file
+
+# Full installation (with LlamaParse):
+# uv pip install llama-index-core llama-index-readers-file llama-parse
+
+# Using dependency groups:
+# uv sync --group llamaparse
+# uv sync --group llamaindex-full
+
+# =============================================================================
+# VERSION COMPATIBILITY NOTES
+# =============================================================================
+
+# LlamaIndex requires Python >=3.9, <4.0
+# Your project requires Python >=3.10, <3.14 - COMPATIBLE ✓
+
+# Key package versions (as of Jan 2026):
+# - llama-index-core: 0.14.13
+# - llama-index-readers-file: 0.4.x
+# - llama-parse: 0.6.91

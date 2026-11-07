@@ -1,0 +1,75 @@
+name: Deploy Task Processor (Dev)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/rag-task-processor/**'
+      - 'scripts/deploy_task_processor_*.py'
+      - '.github/workflows/task-processor-dev.yml'
+  workflow_dispatch:
+
+env:
+  SERVICE_NAME: rag-task-processor-dev
+  REGION: us-central1
+  RUNTIME: python311
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_DEV }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install dependencies
+        working-directory: ./apps/rag-task-processor
+        run: |
+          uv sync
+
+      - name: Lint check
+        working-directory: ./apps/rag-task-processor
+        run: |
+          uv run ruff check . || true
+
+      - name: Deploy to Cloud Functions
+        env:
+          GOOGLE_CLOUD_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_DEV }}
+          GOOGLE_CLOUD_REGION: ${{ env.REGION }}
+        working-directory: ./scripts
+        run: |
+          uv run python -m deploy_task_processor_dev
+
+      - name: Verify deployment
+        env:
+          GOOGLE_CLOUD_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_DEV }}
+        run: |
+          gcloud functions describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format="value(name,status)"
+
+      - name: Output deployment status
+        if: success()
+        run: |
+          echo "✅ Task Processor deployed successfully to ${{ env.SERVICE_NAME }}"
+          echo "Region: ${{ env.REGION }}"
